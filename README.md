@@ -1,300 +1,456 @@
-🕵️ Ms Webpilot — A Privacy-First Browser Agent
+# 🕵️ Ms WebPilot — A Privacy-First Browser Agent
 
-An intelligent browser automation agent that understands your screen, protects your sensitive data locally, and safely executes tasks — without ever sending raw personal information to the cloud.
+An intelligent browser automation agent that understands your screen, protects sensitive data locally, and executes browser tasks using AI reasoning — with long-term memory for relevant user preferences.
 
-Ms WebPilot is a full-stack browser agent built for Smart India Hackathon 2026 (Problem Statement ID: 26171 — On-device Visual Perception for Light-weight Browser Agents).
+Ms WebPilot is a full-stack browser agent built for **Smart India Hackathon 2026** (Problem Statement ID: 26171 — On-device Visual Perception for Light-weight Browser Agents).
 
-The system runs perception and privacy protection locally in the browser, sanitizing sensitive data before any network request is made, and only sends safe, redacted context to a server-side AI model for reasoning.
+The system combines on-device perception and privacy protection with server-side AI reasoning. It sanitizes sensitive context before sending it to the reasoning layer and uses **Hindsight-powered long-term memory** to personalize future browser tasks using relevant saved preferences.
 
-It also features a Privacy Firewall, an on-device protection layer that detects and redacts PII, credentials, and faces using local vision and text sanitization models — before the AI reasoning layer ever sees the data.
-
----
+> **Core idea:** See locally. Protect sensitive data. Reason intelligently. Remember relevant preferences. Execute validated actions.
 
 ## 💻 Repository
 
-🔧 Status: Prototype under active development — not yet deployed
-
-💻 GitHub Repository:
-https://github.com/aakashtripathi011/Ms-WebPilot
-
----
+- **GitHub:** https://github.com/aakashtripathi011/Ms-WebPilot
+- **Status:** Prototype under active development — not yet deployed
+- **Purpose:** SIH 2026, educational use, and project demonstrations
 
 ## ✨ Features
 
 ### 🔐 Privacy Firewall
-- Local PII detection (email, phone, government IDs, card numbers)
-- Face detection and blurring
-- Password/credential black-out
-- Redaction metadata generation for server-side awareness
+
+- Local PII detection for emails, phone numbers, government IDs, and card numbers.
+- Face detection and blurring.
+- Password and credential masking.
+- Redaction metadata generation for server-side awareness.
+- A privacy layer designed to sanitize sensitive information before AI reasoning.
 
 ### 👁️ Local Visual Perception
-- On-device screen understanding using a lightweight vision model
-- Runs entirely in-browser via WebGPU
-- No raw screenshot ever leaves the device unprotected
+
+- On-device browser understanding using a lightweight vision model.
+- WebGPU-based inference where supported.
+- Browser page-state and visual context collection.
+- A privacy-conscious perception pipeline designed to avoid sending unprotected raw screenshots to the reasoning service.
 
 ### 🧠 AI-Powered Reasoning
-- Sanitized context sent to a server-side vision-language model
-- Model interprets the task and returns a structured action
-- Works with open-weight models (swappable, model-agnostic)
+
+- Uses a server-side vision-language model to select the next browser action.
+- Integrates with OpenRouter for model access.
+- Supports a configurable model-selection and fallback strategy.
+- Produces structured action responses instead of directly executing arbitrary model-generated code.
+
+### 🧩 Hindsight Long-Term Memory
+
+Ms WebPilot integrates **Hindsight**, a long-term memory system powered by Vectorize, to make browser automation more personalized across separate tasks.
+
+The agent can save an explicitly provided user preference, retrieve relevant memories for a new task, and provide those memories to the AI reasoning layer as contextual information.
+
+Key capabilities:
+
+- **Explicit memory saving:** Users can ask WebPilot to remember a preference.
+- **Contextual recall:** Relevant memories are retrieved when a browser task is processed.
+- **Personalized search:** The reasoning model can use relevant saved preferences to refine browser search queries.
+- **Memory-aware reasoning:** Retrieved memories are included in the model prompt as contextual information, not as instructions that override the current task.
+- **Dashboard visibility:** A Memory Activity panel displays memory-related events, including saves, recalls, retrieval counts, and errors.
+- **Graceful failure handling:** Memory operations are designed to handle failures without unnecessarily crashing the agent workflow.
+
+#### Example: Preference-Based Browser Search
+
+Suppose a user tells WebPilot:
+
+`Remember that I like Bella Vita CEO Man perfume.`
+
+Later, in a separate task, the user asks:
+
+`Find a good Bella Vita men's perfume for me on Amazon.`
+
+WebPilot can retrieve the saved preference and use it to personalize the search toward **Bella Vita CEO Man** rather than performing only a generic product search.
+
+This demonstrates how long-term memory can make browser automation more context-aware across separate tasks.
 
 ### ✅ Action Validation
-- Every AI-generated action is checked against a JSON schema before execution
-- Rejects malformed, unsafe, or low-confidence actions
-- Prevents the agent from blindly trusting model output
+
+- AI-generated browser actions are checked by the Action Validator.
+- Structured action validation helps reject malformed or unsupported actions.
+- Browser actions are restricted to the supported action types and validation rules.
+- The model's output is treated as a proposed action, not automatically trusted executable code.
 
 ### ⚡ Browser Automation
-- Executes validated actions — click, type, scroll, navigate, submit
-- Runs as a browser extension (Chrome Manifest V3 + Firefox WebExtensions)
-- Continuously observes new page state and loops back into perception
 
----
+- Browser automation through a Chrome Manifest V3 extension.
+- Executes supported actions such as clicking, typing, scrolling, and navigation.
+- Uses Socket.IO for real-time communication between the extension and backend.
+- Observes updated page state and continues the task loop.
 
-## 🤖 Privacy-Preserving Pipeline
+### 🔄 Privacy-Preserving, Memory-Aware Agent Loop
 
-Ms WebPilot processes every task through a 7-stage loop, ensuring sensitive data never reaches the server unprotected.
+Ms WebPilot combines perception, privacy protection, AI reasoning, action validation, execution, and long-term memory.
 
-**Agent Loop**
+`SEE → PROTECT → RECALL → THINK → VALIDATE → ACT → OBSERVE → REPEAT`
 
-```
-SEE → PROTECT → THINK → VALIDATE → ACT → OBSERVE → REPEAT
-```
+The memory stage supplies relevant context when available. It does not replace the current user task or the action-validation layer.
 
-| Stage | What Happens |
+## 🤖 How the Agent Works
+
+| Stage | What happens |
 |---|---|
-| **See** | Extension captures the current browser state (DOM + screenshot) |
-| **Protect** | Local vision model + Privacy Firewall detect and redact sensitive elements |
-| **Think** | Sanitized context is sent to the server; AI model reasons about the task |
-| **Validate** | Action Validator checks the AI's response against a JSON schema |
-| **Act** | Browser extension executes the validated action |
-| **Observe** | New page state is captured; loop continues until task completion |
+| **See** | The extension captures the current browser state. |
+| **Protect** | Local perception and privacy sanitization process the available context. |
+| **Recall** | Hindsight retrieves potentially relevant long-term memories for the current task. |
+| **Think** | The reasoning model uses the task, page state, action history, and relevant memories to select the next action. |
+| **Validate** | The Action Validator checks the proposed action. |
+| **Act** | The extension executes the validated action. |
+| **Observe** | The extension captures the updated browser state. |
+| **Repeat** | The agent continues until the task is complete or no safe next action exists. |
 
-The extracted action is validated before execution rather than being treated as automatically safe — the extension checks it against schema rules first.
+Memory recall is contextual: the system should use relevant preferences, not blindly apply every saved memory to every task.
 
----
+## 🧠 Hindsight Memory Architecture
+
+Hindsight provides the long-term memory layer, while the browser extension, backend, reasoning model, and dashboard handle the rest of the workflow.
+
+### Memory lifecycle
+
+1. **Capture a preference:** The user explicitly asks WebPilot to remember something.
+2. **Save the memory:** The backend sends the preference to Hindsight through `backend/memory.js`.
+3. **Start a future task:** The user submits a new browser automation task.
+4. **Retrieve relevant context:** The backend calls Hindsight recall using the task and current page context.
+5. **Pass context to the planner:** `backend/qwen.js` incorporates retrieved memories into the reasoning prompt.
+6. **Personalize the next action:** The model uses relevant context when appropriate, while following the current user request.
+7. **Display activity:** The dashboard receives memory activity updates through Socket.IO.
+
+### Memory-related components
+
+| Component | Responsibility |
+|---|---|
+| `backend/memory.js` | Hindsight client integration, memory retention, recall, connection testing, and sensitive-data checks. |
+| `backend/server.js` | Receives tasks, coordinates memory operations, passes recalled memories to the planner, and emits memory activity events. |
+| `backend/qwen.js` | Includes retrieved long-term memories in the AI reasoning prompt. |
+| `dashboard/app/page.jsx` | Displays memory activity and the latest memory-related status. |
+| Hindsight service | Stores and retrieves long-term memories through the configured Hindsight service. |
+
+### Memory Activity Dashboard
+
+The dashboard provides visibility into recent memory operations, including:
+
+- **Saved:** A preference was successfully saved.
+- **Recalled:** Relevant memories were retrieved for a task.
+- **No memories:** No relevant memories were retrieved.
+- **Error:** A memory operation failed or could not be confirmed.
+- **Retrieval count:** The number of memories retrieved for the latest recall event.
+- **Last updated:** The timestamp associated with the latest memory activity.
+
+The dashboard status is an activity indicator, not a guarantee that every retrieved memory influenced the final action.
 
 ## 🛡️ Redaction Scheme
 
-| Data Type | Redaction Method |
+| Data type | Intended protection |
 |---|---|
-| Faces | Blurred |
-| Passwords / credentials | Blacked out |
-| PII (email, phone, ID, card numbers) | Masked |
+| Faces | Blurring |
+| Passwords and credentials | Blacking out or masking |
+| PII such as emails, phone numbers, IDs, and card numbers | Masking or redaction |
+| Redaction metadata | Communicates which information was intentionally hidden |
 
-Redaction metadata is passed along with the sanitized context so the server-side model knows which regions were intentionally hidden.
-
----
+The Privacy Firewall and Hindsight memory system have different responsibilities. The firewall protects sensitive browser context; Hindsight provides long-term memory. Memory content should be treated as untrusted context and should not override current instructions or security rules.
 
 ## 🏗️ System Architecture
 
 ```text
                          ┌──────────────────────┐
-                         │        User           │
-                         └──────────┬────────────┘
+                         │        User          │
+                         └──────────┬───────────┘
                                     │
                                     ▼
                          ┌──────────────────────┐
-                         │  Browser Extension     │
-                         │  Chrome MV3 / Firefox  │
-                         │     WebExtensions      │
-                         └──────────┬────────────┘
-                                    │
-                          Local perception + redaction
+                         │   Browser Extension  │
+                         │     Chrome MV3       │
+                         └──────────┬───────────┘
                                     │
                                     ▼
                     ┌───────────────────────────────┐
-                    │      🔒 LOCAL / ON-DEVICE       │
-                    │  (raw data never leaves here)  │
-                    │                                 │
-                    │  Local Perception (WebGPU)      │
-                    │        ↓                        │
-                    │  Privacy Firewall                │
-                    │  (faces blurred, passwords       │
-                    │   blacked out, PII masked)        │
-                    │        ↓                          │
-                    │  Sanitized Context + Metadata     │
-                    └───────────────┬───────────────────┘
-                                    │  sanitized context only
+                    │     LOCAL PERCEPTION          │
+                    │                               │
+                    │  Browser State / Visual Input │
+                    │               ↓               │
+                    │       Privacy Firewall        │
+                    │               ↓               │
+                    │      Sanitized Context        │
+                    └───────────────┬───────────────┘
+                                    │
                                     ▼
                     ┌───────────────────────────────┐
-                    │     ☁️ SECURE REASONING          │
-                    │      (external server)          │
-                    │                                  │
-                    │  AI Reasoning (VLM)               │
-                    │        ↓                          │
-                    │  Action Validator (JSON Schema)   │
-                    │        ↓                          │
-                    │  Structured Action Response        │
-                    └───────────────┬───────────────────┘
+                    │       NODE.JS BACKEND         │
+                    │                               │
+                    │       Task Coordination      │
+                    │               ↓               │
+                    │       Hindsight Recall        │
+                    │               ↓               │
+                    │      AI Reasoning (Qwen)      │
+                    │               ↓               │
+                    │       Action Validator        │
+                    └───────────────┬───────────────┘
                                     │
-                                    ▼
-                         ┌──────────────────────┐
-                         │   Browser Execution    │
-                         │  click · type · scroll │
-                         │   navigate · submit    │
-                         └──────────┬────────────┘
-                                    │
-                                    ▼
-                            Observe Result
-                                    │
-                          (loops back to Local
-                             Perception / See)
+                     ┌──────────────┴──────────────┐
+                     ▼                             ▼
+          ┌────────────────────┐      ┌────────────────────┐
+          │ Hindsight Service  │      │ Browser Extension  │
+          │ Long-Term Memory   │      │ Validated Actions  │
+          └────────────────────┘      └─────────┬──────────┘
+                                                │
+                                                ▼
+                                      ┌────────────────────┐
+                                      │ Observe New State  │
+                                      │ Continue Agent Loop│
+                                      └────────────────────┘
+
+                       Dashboard ← Socket.IO
+                   Memory Activity / Agent Status
 ```
 
-**Architecture Overview**
-- **Client:** Browser extension (Chrome MV3 + Firefox WebExtensions) captures screen state and runs local perception
-- **Privacy Layer:** On-device Privacy Firewall sanitizes PII, credentials, and faces before anything leaves the device
-- **Server:** Reasoning model interprets sanitized context and returns a structured, validated action
-- **Execution:** Extension executes only validated actions and re-observes the browser state
+### Architecture overview
 
----
+- **Client:** Browser extension captures browser state and runs the configured local perception and privacy-protection pipeline.
+- **Privacy layer:** Sanitizes sensitive information before it is sent to the reasoning service.
+- **Backend:** Coordinates tasks, memory retrieval, AI reasoning, and action validation.
+- **Long-term memory:** Hindsight stores and retrieves relevant user preferences and past context.
+- **Reasoning:** The configured model chooses the next browser action using the task, page state, action history, and relevant memories.
+- **Execution:** The extension executes validated actions and observes the result.
+- **Dashboard:** Shows agent status and memory activity.
 
 ## 🔄 Application Flow
 
-**End-to-End Task Flow**
+### Example: Search for a Product
 
+**Task:** `Search Amazon for a black bag`
+
+1. The extension captures the current browser state.
+2. The local privacy layer sanitizes available sensitive context.
+3. The backend retrieves relevant memories, if any.
+4. The reasoning model selects the next action.
+5. The Action Validator checks the proposed action.
+6. The extension executes the action.
+7. The updated page state is observed.
+8. The agent continues until the task is complete.
+
+### Example: Personalized Search Using Memory
+
+**First task — Save a preference**
+
+`Remember that I like Bella Vita CEO Man perfume.`
+
+The backend identifies the explicit memory request and asks Hindsight to retain the preference.
+
+**Second task — Use the preference**
+
+`Find a good Bella Vita men's perfume for me on Amazon.`
+
+The backend recalls relevant memories and passes them to the reasoning model. When the saved preference is relevant, the model can use it to refine the search toward Bella Vita CEO Man.
+
+This workflow has been demonstrated with a separate follow-up task that produced the expected personalized search.
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js and npm
+- A Chromium-based browser for the Chrome extension
+- An OpenRouter API key for the configured reasoning models
+- Hindsight service access and an API key
+- A compatible local environment for the configured perception model
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/aakashtripathi011/Ms-WebPilot.git
+cd Ms-WebPilot
 ```
-User gives a task
-       ↓
-Extension captures browser state
-       ↓
-Local Perception reads the screen
-       ↓
-Privacy Firewall redacts sensitive data
-       ↓
-Sanitized context sent to server
-       ↓
-AI Reasoning generates next action
-       ↓
-Action Validator checks the action
-       ↓
-Browser executes the validated action
-       ↓
-New page state observed
-       ↓
-Loop continues until task is complete
+
+### 2. Install backend dependencies
+
+```bash
+cd backend
+npm install
 ```
 
-**Example Task**
+Use the project's existing package configuration and scripts. Start the backend using the command defined in `backend/package.json`.
 
-```
-Task: "Search Amazon for a black bag"
+### 3. Configure environment variables
 
-Extension  → Capture screen (DOM + screenshot)
-Firewall   → Redact saved address / payment / login info
-Extension  → Send sanitized context to server
-Server     → Action: click search bar
-Extension  → Execute click
-Server     → Action: type "black bag"
-Extension  → Execute type
-Server     → Action: press Enter
-Extension  → Execute Enter
-             → Search results displayed to user
+Configure the required environment variables in the appropriate backend environment file.
+
+```env
+OPENROUTER_API_KEY=your_openrouter_api_key
+
+HINDSIGHT_API_KEY=your_hindsight_api_key
+HINDSIGHT_BASE_URL=your_hindsight_service_url
+HINDSIGHT_BANK_ID=your_hindsight_bank_id
 ```
 
-No personal or account data ever leaves the device during this flow.
+Use the actual base URL and bank identifier provided by your Hindsight setup. The names above correspond to the variables used by the current integration.
 
----
+**Security requirements:**
+
+- Never commit `.env` files.
+- Never put API keys in frontend code or browser-extension source.
+- Do not share API keys in screenshots, logs, or demo recordings.
+- Keep credentials out of Git history.
+
+### 4. Install dashboard dependencies
+
+From the repository root, enter the dashboard directory:
+
+```bash
+cd dashboard
+npm install
+```
+
+Start the dashboard using the development script configured in `dashboard/package.json`.
+
+### 5. Load the browser extension
+
+1. Open the browser's extensions page.
+2. Enable Developer Mode.
+3. Choose the option to load an unpacked extension.
+4. Select the extension directory containing the project's manifest.
+5. Start the backend and dashboard as required by the project configuration.
+
+Ensure the configured backend URL and extension permissions match your local environment.
+
+### 6. Verify Hindsight connectivity
+
+Use the existing memory connection test to verify that the backend can communicate with Hindsight.
+
+Confirm that:
+
+- The configured credentials and service URL are valid.
+- A memory can be retained.
+- A relevant memory can be recalled.
+- The backend reports failures clearly when the service is unavailable.
+
+Do not expose credentials when sharing test output.
+
+> **Note:** This is a development prototype. Exact scripts, ports, model availability, and deployment configuration depend on the repository's current configuration.
+
+## 🧪 Testing the Memory Workflow
+
+A simple end-to-end demonstration can verify that long-term memory influences a future task.
+
+1. Start the backend and load the browser extension.
+2. Open the dashboard and verify that the backend connection is working.
+3. Submit the task: `Remember that I like Bella Vita CEO Man perfume.`
+4. Confirm that the dashboard reports the memory save event.
+5. Start a separate task: `Find a good Bella Vita men's perfume for me on Amazon. Use my saved preferences to personalize the search.`
+6. Observe the Hindsight recall event in the backend logs.
+7. Verify that the resulting Amazon search reflects the saved preference.
+8. Capture the dashboard and browser behavior for a project demonstration.
+
+**Expected result:** The saved preference is retrieved during the later task and can influence the search query.
+
+This is a demonstration of the implemented workflow, not a guarantee that every memory will be retrieved or that every task will be personalized correctly.
 
 ## 📊 Evaluation Metric Alignment
 
-| Metric | Weight | Our Approach |
-|---|---|---|
-| Accuracy of visual context | 25% | Local vision model + DOM/visual context for structured screen understanding |
-| PII detection recall/precision | 20% | DOM + text sanitization + face detection (layered detection) |
-| Precision of redaction | 20% | Region-level, type-specific redaction (blur/black-out/mask) preserving usable context |
-| Client-side resource utilization | 20% | Quantized local model via WebGPU, with CPU fallback |
-| End-to-end latency | 15% | Optimized capture → perception → protection → reasoning → validation → action pipeline |
+| Metric | Weight | Approach |
+|---|---:|---|
+| Accuracy of visual context | 25% | Local perception and browser-state context |
+| PII detection recall/precision | 20% | Layered DOM, text sanitization, and face detection |
+| Precision of redaction | 20% | Type-specific masking, blurring, and redaction |
+| Client-side resource utilization | 20% | Lightweight local inference and supported acceleration |
+| End-to-end latency | 15% | Perception, protection, reasoning, validation, and execution pipeline |
 
----
+These are the target evaluation weights from the project requirements, not measured benchmark results. Long-term memory is an additional capability intended to improve contextual continuity and personalization.
 
 ## 🛠️ Tech Stack
 
 | Technology | Purpose |
 |---|---|
-| Chrome Manifest V3 | Browser extension runtime (Chrome) |
-| Firefox WebExtensions | Browser extension runtime (Firefox) |
-| WebGPU | Local ML inference acceleration |
+| Chrome Manifest V3 | Browser extension runtime |
+| WebExtensions | Browser extension architecture |
+| WebGPU | Local ML inference acceleration where supported |
 | Transformers.js | In-browser model execution |
-| ONNX Runtime Web | Runs ML models directly inside the browser |
-| Local Vision Model | Lightweight on-device visual perception |
-| DOM/Text Sanitization | Local PII detection and redaction |
-| Face Detection | Local face detection and blurring |
+| ONNX Runtime Web | Browser-based ML inference where configured |
+| Local vision model | On-device visual perception |
+| DOM and text sanitization | Local sensitive-data detection and redaction |
+| Face detection | Face detection and blurring |
 | Node.js | Backend runtime |
-| Express.js | REST API / server framework |
-| Socket.IO | Real-time browser–server coordination |
-| Vision-Language Model | Server-side reasoning (open-weight, swappable) |
-| JSON Schema | Action validation before execution |
+| Express.js | REST API and server framework |
+| Socket.IO | Real-time browser–server and dashboard communication |
+| OpenRouter | Access to configured reasoning models |
+| Qwen | AI reasoning through the configured model integration |
+| Hindsight / Vectorize | Long-term memory retention and recall |
+| JSON Schema / Action Validator | Structured action validation |
+| Next.js and React | Dashboard interface |
 
----
+## 🔒 Security and Privacy
 
-## 🔒 Why It's Different
+Ms WebPilot is designed around a local privacy boundary and controlled browser execution.
 
-| | Traditional Browser Agent | Ms WebPilot |
-|---|---|---|
-| Data sent to cloud | Raw screenshot / full page data | Sanitized, PII-redacted context only |
-| Privacy boundary | After AI reasoning (or none) | Before AI reasoning |
-| Action trust | AI output executed directly | Every action passes an Action Validator |
-| Model flexibility | Tightly coupled | Modular — perception/reasoning models are swappable |
+- Sensitive browser context is processed by the local privacy pipeline before being sent to the reasoning service.
+- Memory content is treated as contextual data, not trusted instructions.
+- The current user request takes precedence over conflicting saved preferences.
+- AI-generated actions pass through the Action Validator before execution.
+- API keys and service credentials belong in environment variables, not source code.
+- Memory retrieval and save failures should be handled without assuming that an operation succeeded.
 
----
+### Important privacy considerations
 
-## 🔐 Security
+Long-term memory introduces an additional data-handling responsibility. A saved preference may persist beyond the browser session, depending on the Hindsight service configuration.
 
-- Raw screenshots and page data never leave the device unprotected
-- Faces, passwords, and PII are redacted locally before any network request
-- Every AI-generated action is validated against a schema before execution
-- Sensitive credentials (API keys, server secrets) are managed via environment variables
+Users should avoid storing passwords, authentication tokens, payment details, or other secrets as memories. The memory integration's sensitive-data checks are a safeguard, not a guarantee that every sensitive value will be detected.
 
-The following should never be committed to the repository:
+The claim that browser data is protected must be understood in the context of the implemented local sanitization pipeline and its limitations; no automated redaction system can guarantee perfect detection of every sensitive value.
+
+### Never commit
+
 - `.env` files
-- API keys / model gateway credentials
+- API keys or model gateway credentials
 - Server secrets
-- Any raw user data captured during testing
+- Raw user data captured during testing
+- Sensitive memory content or credentials in logs and screenshots
 
----
+## 🔭 Future Improvements
 
-## 🚀 Future Improvements
-
-- Adaptive resolution perception for better latency/accuracy balance
-- Broader PII detection coverage (multilingual text, handwritten fields)
-- Support for additional browsers (Edge, Safari)
-- On-device caching of frequent action patterns
-- Visual explainability — show users what was redacted before sending
-- Offline-first fallback reasoning for low-connectivity environments
-- Expanded benchmark suite for accuracy, recall, and latency metrics
-
----
+- Adaptive-resolution perception for better latency and accuracy.
+- Broader PII detection, including multilingual text and handwritten fields.
+- Expanded browser support and compatibility testing.
+- On-device caching of frequent action patterns.
+- Visual explainability for locally redacted content.
+- Offline-first fallback reasoning.
+- Expanded benchmarks for accuracy, recall, latency, and resource utilization.
+- Improved memory relevance and retrieval evaluation.
+- More explicit memory-management controls and deletion workflows.
+- Better observability for memory failures and personalized-action decisions.
+- Automated end-to-end regression tests for memory saving, recall, and browser execution.
 
 ## 🎯 Project Objective
 
-Background AI agents are becoming increasingly common, but most agentic pipelines run entirely server-side — limiting the type of data users can safely share with them.
+Background AI agents are becoming increasingly common, but many agentic pipelines rely heavily on server-side processing, raising concerns about sensitive user data.
 
-Ms WebPilot's objective is to bridge local and cloud environments: run lightweight perception and privacy protection on the user's device, while still leveraging the reasoning power of server-based AI — without ever exposing raw personal data.
+Ms WebPilot aims to bridge local and cloud environments by combining lightweight on-device perception and privacy protection with server-side AI reasoning.
 
-Instead of choosing between capability and privacy, Ms WebPilot aims to provide both.
+Hindsight adds a long-term memory layer so relevant preferences can be carried across separate browser tasks instead of requiring users to repeat the same context.
 
----
+The objective is to combine **privacy-conscious browser automation, validated actions, and context-aware personalization** in one extensible system.
 
 ## 🏆 Project Highlights
 
 Ms WebPilot combines:
-- On-device visual perception (WebGPU)
-- Local privacy firewall (PII + face redaction)
-- Server-side AI reasoning (open-weight, swappable models)
-- Structured action validation before execution
-- Cross-browser extension support (Chrome + Firefox)
-- Privacy-by-design architecture — protection before reasoning, not after
 
----
+- On-device visual perception.
+- A local privacy firewall for PII and face protection.
+- Server-side AI reasoning using configurable models.
+- Structured browser-action validation.
+- Real-time communication through Socket.IO.
+- Hindsight-powered long-term memory.
+- Preference-aware browser search across separate tasks.
+- A dashboard for agent and memory activity.
+- A modular architecture intended to support further development.
 
 ## 📌 Project Status
 
-🚧 Under Development
+🚧 **Under Active Development**
 
-Ms WebPilot is an actively developed prototype built for SIH 2026 (Problem Statement 26171), with ongoing improvements to perception accuracy, redaction precision, and end-to-end latency.
-
----
+Ms WebPilot is a prototype built for SIH 2026, Problem Statement 26171. The project is being developed and evaluated through ongoing work on perception, privacy protection, browser automation, long-term memory, and end-to-end reliability.
 
 ## 📄 License
 
-This project is currently intended for educational, hackathon, and project demonstration purposes.
+This project is currently intended for educational, hackathon, and project demonstration purposes. Refer to the repository for any applicable license information.
