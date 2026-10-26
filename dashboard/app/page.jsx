@@ -9,6 +9,7 @@ export default function Home() {
     const [task, setTask] = useState("");
     const [message, setMessage] = useState("");
     const [loading, setLoading] = useState(false);
+    const [toast, setToast] = useState(null);
 
     const [agentStatus, setAgentStatus] =
         useState("CONNECTING");
@@ -23,12 +24,29 @@ export default function Home() {
 
     const [activity, setActivity] = useState([]);
 
+    const [memoryActivity, setMemoryActivity] = useState({
+    lastEvent: "idle",
+    lastMessage: "Waiting for memory activity",
+    memoriesRetrieved: 0,
+    lastUpdated: null
+});
+
     // =========================================================
     // LIVE BROWSER PREVIEW
     // =========================================================
 
     const [browserPreview, setBrowserPreview] =
         useState("");
+
+        useEffect(() => {
+    if (!toast) return;
+
+    const timer = setTimeout(() => {
+        setToast(null);
+    }, 6000);
+
+    return () => clearTimeout(timer);
+}, [toast]);
 
 
     // =========================================================
@@ -161,6 +179,11 @@ export default function Home() {
         });
 
 
+
+        socket.on("memory-activity-update", (activity) => {
+    setMemoryActivity(activity);
+});
+
         // =====================================================
         // BROWSER ACTION
         // =====================================================
@@ -220,6 +243,7 @@ export default function Home() {
 
         return () => {
             socket.disconnect();
+            
         };
 
     }, []);
@@ -256,6 +280,8 @@ export default function Home() {
 
             const data = await response.json();
 
+            console.log("📦 API RESPONSE:", data);
+
             if (!response.ok) {
                 throw new Error(
                     data.message ||
@@ -263,9 +289,35 @@ export default function Home() {
                 );
             }
 
-            setMessage(
-                "Task sent successfully."
-            );
+           if (
+    typeof data.memorySaved === "boolean" ||
+    typeof data.memorySaved?.success === "boolean"
+) {
+    const isSaved =
+        typeof data.memorySaved === "boolean"
+            ? data.memorySaved
+            : data.memorySaved.success;
+
+    if (isSaved) {
+        setToast({
+            type: "success",
+            title: "Memory saved",
+            text: `I'll remember: ${task.trim()}`,
+        });
+
+        setMessage("Memory saved successfully.");
+    } else {
+        setToast({
+            type: "error",
+            title: "Memory not saved",
+            text: data.message || "Hindsight could not confirm the save.",
+        });
+
+        setMessage("Memory could not be saved.");
+    }
+} else {
+    setMessage("Task sent successfully.");
+}
 
         } catch (error) {
 
@@ -300,6 +352,148 @@ export default function Home() {
         <main className="min-h-screen bg-[#07111f] font-mono text-[#e8edf2]">
 
 
+{toast && (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#020711]/65 px-5 backdrop-blur-[5px]">
+        <div
+            role="status"
+            aria-live="polite"
+            className={`relative w-full max-w-[480px] overflow-hidden rounded-2xl border bg-[#0b1626] shadow-[0_25px_100px_rgba(0,0,0,0.65)] ${
+                toast.type === "success"
+                    ? "border-[#61e294]/30"
+                    : "border-[#ff7777]/30"
+            }`}
+        >
+            {/* Top accent */}
+            <div
+                className={`h-[3px] w-full ${
+                    toast.type === "success"
+                        ? "bg-gradient-to-r from-transparent via-[#61e294] to-transparent"
+                        : "bg-gradient-to-r from-transparent via-[#ff7777] to-transparent"
+                }`}
+            />
+
+            <div className="p-8 sm:p-10">
+                {/* Header */}
+                <div className="mb-7 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#29415a] bg-[#122238]">
+                            <span className="text-sm font-bold text-[#8ebaff]">
+                                M
+                            </span>
+                        </div>
+
+                        <div>
+                            <p className="text-[11px] font-semibold tracking-[0.2em] text-[#b8c9dc]">
+                                MS / WEBPILOT
+                            </p>
+                            <p className="mt-0.5 text-[9px] tracking-[0.16em] text-[#60758e]">
+                                LONG-TERM MEMORY SYSTEM
+                            </p>
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={() => setToast(null)}
+                        aria-label="Close notification"
+                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#26394e] text-xl text-[#71869d] transition hover:border-[#506a85] hover:bg-[#16263a] hover:text-white"
+                    >
+                        ×
+                    </button>
+                </div>
+
+                {/* Status icon */}
+                <div className="mb-6 flex justify-center">
+                    <div
+                        className={`flex h-[76px] w-[76px] items-center justify-center rounded-2xl border ${
+                            toast.type === "success"
+                                ? "border-[#61e294]/25 bg-[#61e294]/[0.08] shadow-[0_0_40px_rgba(97,226,148,0.08)]"
+                                : "border-[#ff7777]/25 bg-[#ff7777]/[0.08]"
+                        }`}
+                    >
+                        {toast.type === "success" ? (
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                className="h-9 w-9 text-[#70e8a0]"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                            >
+                                <path
+                                    d="M5 12.5l4.5 4.5L19 7"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+                            </svg>
+                        ) : (
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                className="h-9 w-9 text-[#ff8585]"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                            >
+                                <circle cx="12" cy="12" r="9" />
+                                <path
+                                    d="M12 7v6m0 4h.01"
+                                    strokeLinecap="round"
+                                />
+                            </svg>
+                        )}
+                    </div>
+                </div>
+
+                {/* Message */}
+                <div className="text-center">
+                    <p
+                        className={`mb-3 text-[10px] font-semibold uppercase tracking-[0.25em] ${
+                            toast.type === "success"
+                                ? "text-[#70e8a0]"
+                                : "text-[#ff8585]"
+                        }`}
+                    >
+                        {toast.type === "success"
+                            ? "Operation successful"
+                            : "Operation failed"}
+                    </p>
+
+                    <h2 className="text-2xl font-semibold tracking-tight text-[#edf4fc] sm:text-[28px]">
+                        {toast.title}
+                    </h2>
+
+                    <p className="mx-auto mt-4 max-w-[350px] break-words text-sm leading-7 text-[#9aacc1]">
+                        {toast.text}
+                    </p>
+                </div>
+
+                {/* Footer */}
+                <div className="mt-8 border-t border-[#203147] pt-5">
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                            <span
+                                className={`h-1.5 w-1.5 rounded-full ${
+                                    toast.type === "success"
+                                        ? "bg-[#70e8a0] shadow-[0_0_8px_#70e8a0]"
+                                        : "bg-[#ff8585]"
+                                }`}
+                            />
+                            <span className="text-[9px] tracking-[0.13em] text-[#71869d]">
+                                HINDSIGHT MEMORY
+                            </span>
+                        </div>
+
+                        <span className="text-[9px] tracking-wider text-[#53677e]">
+                            WEBPILOT / SYSTEM
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+)}
+
+
+
             {/* =====================================================
                 HEADER
             ====================================================== */}
@@ -316,7 +510,7 @@ export default function Home() {
                     <div className="flex items-center gap-4">
 
                         <div className="flex h-9 w-9 items-center justify-center border border-[#40556d] bg-[#0d1c2d] text-sm font-black">
-                            🍁
+                            
                         </div>
 
                         <div>
@@ -1059,6 +1253,8 @@ export default function Home() {
                                     }
                                 />
 
+                                
+
                                 <Metric
                                     label="STATUS"
                                     value={
@@ -1075,6 +1271,124 @@ export default function Home() {
                     </section>
 
                 </div>
+
+                
+{/* =================================================
+    HINDSIGHT MEMORY ACTIVITY
+================================================== */}
+
+<section className="mt-6 rounded-2xl border border-[#1e3044] bg-[#0a1522] p-5">
+
+    {/* Header */}
+    <div className="flex items-center justify-between">
+
+        <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#29445e] bg-[#102338]">
+                <span className="text-lg">🧠</span>
+            </div>
+
+            <div>
+                <h3 className="text-xs font-bold uppercase tracking-[0.16em] text-[#d5e6f5]">
+                    Memory Activity
+                </h3>
+                <p className="mt-1 text-[10px] text-[#627990]">
+                    Hindsight · Persistent agent memory
+                </p>
+            </div>
+        </div>
+
+        <span
+            className={`rounded-full border px-3 py-1.5 text-[9px] font-bold uppercase tracking-wider ${
+                memoryActivity.lastEvent === "saved"
+                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                    : memoryActivity.lastEvent === "recalled"
+                    ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-400"
+                    : memoryActivity.lastEvent === "error"
+                    ? "border-red-500/30 bg-red-500/10 text-red-400"
+                    : "border-[#294057] bg-[#111f2e] text-[#8095a9]"
+            }`}
+        >
+            {memoryActivity.lastEvent === "saved"
+                ? "SAVED"
+                : memoryActivity.lastEvent === "recalled"
+                ? "RECALLED"
+                : memoryActivity.lastEvent === "no_memories"
+                ? "NO MEMORIES"
+                : memoryActivity.lastEvent === "error"
+                ? "ERROR"
+                : "IDLE"}
+        </span>
+
+    </div>
+
+    {/* Activity Details */}
+    <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto]">
+
+        <div className="rounded-xl border border-[#1e3044] bg-[#0d1b2a] p-4">
+            <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.15em] text-[#627990]">
+                Latest event
+            </p>
+
+            <p className="text-xs leading-6 text-[#c0cfdd]">
+                {memoryActivity.lastMessage ||
+                    "Waiting for memory activity..."}
+            </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 md:min-w-[300px]">
+
+            <div className="flex flex-col justify-center rounded-xl border border-[#1e3044] bg-[#0d1927] p-4">
+                <p className="text-[9px] font-semibold uppercase tracking-wider text-[#71869b]">
+                    Memories retrieved
+                </p>
+
+                <p className="mt-2 text-2xl font-semibold tabular-nums text-[#d5e6f5]">
+                    {memoryActivity.memoriesRetrieved ?? 0}
+                </p>
+
+                <p className="mt-1 text-[9px] text-[#526a81]">
+                    Relevant to task
+                </p>
+            </div>
+
+            <div className="flex flex-col justify-center rounded-xl border border-[#1e3044] bg-[#0d1927] p-4">
+                <p className="text-[9px] font-semibold uppercase tracking-wider text-[#71869b]">
+                    Last updated
+                </p>
+
+                <p className="mt-2 text-lg font-semibold tabular-nums text-[#d5e6f5]">
+                    {memoryActivity.lastUpdated
+                        ? new Date(
+                            memoryActivity.lastUpdated
+                        ).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                        })
+                        : "--:--"}
+                </p>
+
+                <p className="mt-1 text-[9px] text-[#526a81]">
+                    Local time
+                </p>
+            </div>
+
+        </div>
+
+    </div>
+
+    {/* Footer */}
+    <div className="mt-4 flex items-center justify-between border-t border-[#1e3044] pt-3">
+        <span className="text-[9px] uppercase tracking-wider text-[#526a81]">
+            Long-term memory
+        </span>
+
+        <span className="text-[9px] text-[#71869b]">
+            Powered by Hindsight
+        </span>
+    </div>
+
+</section>
+
 
 
                 {/* =================================================
@@ -1098,6 +1412,7 @@ export default function Home() {
         </main>
     );
 }
+
 
 
 /* =============================================================

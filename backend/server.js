@@ -11,6 +11,7 @@ const cors = require("cors");
 const http = require("http");
 const { Server } = require("socket.io");
 const { askQwen } = require("./qwen");
+const { recallMemories, saveMemory } = require("./memory");
 
 const app = express();
 
@@ -47,6 +48,30 @@ let actionHistory = [];
 
 // Prevent multiple AI requests at the same time
 let aiThinking = false;
+
+// =========================
+// LONG-TERM MEMORY ACTIVITY
+// =========================
+
+let memoryActivity = {
+    lastEvent: "idle",
+    lastMessage: "Waiting for memory activity",
+    memoriesRetrieved: 0,
+    lastUpdated: null
+};
+
+function updateMemoryActivity(event, message, memoriesRetrieved = 0) {
+    memoryActivity = {
+        lastEvent: event,
+        lastMessage: message,
+        memoriesRetrieved,
+        lastUpdated: new Date().toISOString()
+    };
+
+    io.emit("memory-activity-update", memoryActivity);
+
+    console.log("🧠 MEMORY ACTIVITY:", memoryActivity);
+}
 
 
 // =========================
@@ -93,50 +118,98 @@ app.post("/api/click", (req, res) => {
 // TASK API
 // =========================
 
-app.post("/api/task", (req, res) => {
+app.post("/api/task", async (req, res) => {
 
     const { task } = req.body;
 
     if (!task || typeof task !== "string") {
-
         return res.status(400).json({
             success: false,
             message: "Task is required"
         });
-
     }
 
-    // Store new task
-    currentTask = task.trim();
+    const trimmedTask = task.trim();
 
-    // IMPORTANT:
-    // New task = new memory
+    // Detect explicit memory requests only
+   const memoryMatch = trimmedTask.match(
+    /^(?:(?:hey|hi|please|okay|ok)[,\s]+)*(?:remember that|remember this|remember|don't forget that|do not forget that|yaad rakhna(?:\s+ki)?)\s*[:,]?\s+(.+)$/i
+);
+
+    let memorySaved = false;
+
+    if (memoryMatch) {
+        const preference = memoryMatch[1].trim();
+
+        if (preference) {
+    try {
+        const saveResult = await saveMemory(
+            preference,
+            "explicit-user-preference"
+        );
+
+        memorySaved =
+            saveResult === true ||
+            saveResult?.success === true;
+
+        updateMemoryActivity(
+            memorySaved ? "saved" : "error",
+            memorySaved
+                ? "Preference saved to long-term memory"
+                : "Could not confirm memory save"
+        );
+    } catch (error) {
+        console.error("[Hindsight] Save failed:", error.message);
+
+        memorySaved = false;
+
+        updateMemoryActivity(
+            "error",
+            "Failed to save preference"
+        );
+    }
+}
+
+        // Do not execute a memory instruction as a browser task.
+        return res.json({
+            success: true,
+            message: memorySaved
+                ? "Preference saved to long-term memory"
+                : "Preference could not be saved",
+            memorySaved
+        });
+
+        console.log("🧠 MEMORY API RESPONSE:", {
+    success: true,
+    message: memorySaved
+        ? "Preference saved to long-term memory"
+        : "Preference could not be saved",
+    memorySaved
+});
+    }
+
+    // Store ordinary browser task
+    currentTask = trimmedTask;
+
+    // New task = fresh short-term action history
     actionHistory = [];
 
     // Reset AI lock
     aiThinking = false;
 
-    console.log(
-        "🎯 USER TASK:",
-        currentTask
-    );
-
-    console.log(
-        "🧠 ACTION MEMORY RESET"
-    );
+    console.log("🎯 USER TASK:", currentTask);
+    console.log("🧠 ACTION MEMORY RESET");
 
     io.emit("task-started", {
         task: currentTask
     });
 
-    res.json({
+    return res.json({
         success: true,
         message: "Task stored",
         task: currentTask
     });
-
 });
-
 
 // =========================
 // TYPE API
@@ -389,12 +462,29 @@ io.on("connection", (socket) => {
                 );
 
 
-                const action =
-                    await askQwen(
-                        state,
-                        currentTask,
-                        actionHistory
-                    );
+const memoryQuery = `Task: ${currentTask}
+Current page: ${state.title || ""}`;
+
+const longTermMemories = await recallMemories(memoryQuery);
+
+console.log(
+    `[Hindsight] Retrieved ${longTermMemories.length} relevant memories`
+);
+
+updateMemoryActivity(
+    longTermMemories.length > 0 ? "recalled" : "no_memories",
+    longTermMemories.length > 0
+        ? `Retrieved ${longTermMemories.length} relevant memories`
+        : "No relevant memories found for this task",
+    longTermMemories.length
+);
+
+const action = await askQwen(
+    state,
+    currentTask,
+    actionHistory,
+    longTermMemories
+);
 
 
                 console.log(
